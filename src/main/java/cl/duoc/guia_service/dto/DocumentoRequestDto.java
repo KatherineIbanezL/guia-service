@@ -1,5 +1,9 @@
 package cl.duoc.guia_service.dto;
 
-public class GuiaRequestDto {
-    
+import lombok.Data;
+
+@Data
+public class DocumentoRequestDto {
+    private String nombreArchivo;
+    private String transportista;
 }

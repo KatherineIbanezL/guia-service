@@ -61,6 +61,15 @@ public class DocumentoService {
         return documentoRepository.save(doc);
     }
 
+    // Criterio 4: eliminar guías específicas
+    public void eliminarDocumentoFisicoYLogico(Documento doc) throws Exception {
+    // 1. Eliminar del sistema de archivos temporal EFS
+    efsService.eliminarDeEfs(doc.getRutaEfs());
+    
+    // 2. Eliminar el registro en la base de datos de Oracle Cloud
+    documentoRepository.delete(doc);
+    }   
+
     // Criterio 5: Consultar el historial de archivos por entidad y rango de fechas
     public List<Documento> consultarHistorial(String entidad, LocalDateTime inicio, LocalDateTime fin) {
         return documentoRepository.findByTransportistaEntityAndFechaCreacionBetween(entidad, inicio, fin);
