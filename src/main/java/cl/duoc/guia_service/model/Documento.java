@@ -2,6 +2,9 @@ package cl.duoc.guia_service.model;
 
 import javax.persistence.*; 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -20,5 +23,33 @@ public class Documento {
     private LocalDateTime fechaModificacion;
     private String rutaEfs; 
     private String s3Key;   
-    private String estado;  
+    private String estado;
+    
+    // Agrega esto al final de tu clase Documento.java
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getNombreArchivo() { return nombreArchivo; }
+    public void setNombreArchivo(String nombreArchivo) { this.nombreArchivo = nombreArchivo; }
+
+    public String getTipoDocumento() { return tipoDocumento; }
+    public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
+
+    public String getTransportistaEntity() { return transportistaEntity; }
+    public void setTransportistaEntity(String transportistaEntity) { this.transportistaEntity = transportistaEntity; }
+
+    public java.time.LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+
+    public java.time.LocalDateTime getFechaModificacion() { return fechaModificacion; }
+    public void setFechaModificacion(java.time.LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
+
+    public String getRutaEfs() { return rutaEfs; }
+    public void setRutaEfs(String rutaEfs) { this.rutaEfs = rutaEfs; }
+
+    public String getS3Key() { return s3Key; }
+    public void setS3Key(String s3Key) { this.s3Key = s3Key; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }
