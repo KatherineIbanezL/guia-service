@@ -1,7 +1,7 @@
 package cl.duoc.guia_service.controller;
 
-import cl.duoc.guia_service.model.Guia;
-import cl.duoc.guia_service.service.GuiaService;
+import cl.duoc.guia_service.model.Documento;
+import cl.duoc.guia_service.service.DocumentoService;
 import cl.duoc.guia_service.service.S3Service;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -13,82 +13,87 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/guias")
-public class GuiaController {
+@RequestMapping("/api/documentos")
+public class DocumentoController {
 
-    private final GuiaService guiaService;
+    private final DocumentoService documentoService;
     private final S3Service s3Service;
 
-    public GuiaController(GuiaService guiaService, S3Service s3Service) {
-        this.guiaService = guiaService;
+    public DocumentoController(DocumentoService documentoService, S3Service s3Service) {
+        this.documentoService = documentoService;
         this.s3Service = s3Service;
     }
 
-    // 1. Crear guías de despacho (e integración automática de subida a S3)
-    @PostMapping("/crear")
-    public ResponseEntity<Guia> crearGuia(@RequestParam Long pedidoId, @RequestParam String transportista) {
+    // Mapea Criterio 1 y 2: Crear almacenamiento EFS y subir automático a S3
+    @PostMapping("/generar")
+    public ResponseEntity<Documento> generarDocumento(
+            @RequestParam String transportista,
+            @RequestParam String nombreArchivo) {
         try {
-            // Mock PDF binario simulando la estructura del documento de transporte
-            byte[] mockPdfBytes = "%PDF-1.4 Mock Document Content - Guia Despacho".getBytes();
-            Guia nuevaGuia = guiaService.procesarYCrearGuia(pedidoId, transportista, mockPdfBytes);
-            return new ResponseEntity<>(nuevaGuia, HttpStatus.CREATED);
+            byte[] mockPdf = "%PDF-1.4 Estandar de Guia de Despacho Logistica".getBytes();
+            Documento nuevoDoc = documentoService.registrarDocumento(transportista, nombreArchivo, mockPdf);
+            return new ResponseEntity<>(nuevoDoc, HttpStatus.CREATED);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    // 2. Descargar guías con validación básica de permisos
-    @GetMapping("/descargar/{id}")
-    public ResponseEntity<byte[]> descargarGuia(@PathVariable Long id, @RequestHeader("X-Auth-Token") String token) {
-        // Simulación de validación de permisos requerida
-        if (token == null || !token.equals("TOKEN_VALIDO_DUOC")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
+    // Mapea Criterio 3: Modificar y actualizar los archivos en S3
+    @PutMapping("/actualizar/{id}")
+    public ResponseEntity<Documento> actualizarDocumento(
+            @PathVariable Long id,
+            @RequestBody String nuevoContenidoTexto) {
         try {
-            Guia guia = guiaService.obtenerPorId(id);
-            byte[] archivoS3 = s3Service.descargarDesdeS3(guia.getUrlS3());
+            byte[] nuevosBytes = nuevoContenidoTexto.getBytes();
+            Documento docActualizado = documentoService.actualizarDocumento(id, nuevosBytes);
+            return ResponseEntity.ok(docActualizado);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // Mapea Criterio 4: Descargar los archivos desde AWS S3
+    @GetMapping("/descargar/{id}")
+    public ResponseEntity<byte[]> descargarDocumento(@PathVariable Long id) {
+        try {
+            Documento doc = documentoService.obtenerPorId(id);
+            byte[] archivoBytes = s3Service.descargarArchivo(doc.getS3Key());
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData("attachment", "guia_" + id + ".pdf");
-            
-            return new ResponseEntity<>(archivoS3, headers, HttpStatus.OK);
+            headers.setContentDispositionFormData("attachment", doc.getNombreArchivo());
+
+            return new ResponseEntity<>(archivoBytes, headers, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
-    // 3. Modificar o actualizar guías
-    @PutMapping("/{id}")
-    public ResponseEntity<Guia> actualizarGuia(@PathVariable Long id, @RequestBody Guia datosActualizados) {
-        try {
-            Guia modificada = guiaService.actualizarGuia(id, datosActualizados);
-            return ResponseEntity.ok(modificada);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    // 4. Eliminar guías específicas
+    // Endpoint obligatorio: Eliminar guías específicas
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> eliminarGuia(@PathVariable Long id) {
+    public ResponseEntity<String> eliminarDocumento(@PathVariable Long id) {
         try {
-            guiaService.eliminarGuia(id);
-            return ResponseEntity.ok("Guía eliminada exitosamente del ecosistema.");
+            // Buscamos el documento en Oracle Cloud
+            Documento doc = documentoService.obtenerPorId(id);
+            
+            documentoService.eliminarDocumentoFisicoYLogico(doc);
+            
+            return ResponseEntity.ok("Archivo y registros eliminados con éxito.");
         } catch (Exception e) {
-            return new ResponseEntity<>("Error al procesar la eliminación: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al eliminar el archivo: " + e.getMessage());
         }
     }
 
-    // 5. Consultar guías por transportista y rango de fechas
-    @GetMapping("/consultar")
-    public ResponseEntity<List<Guia>> consultarGuias(
+    // Mapea Criterio 5: Consulta el historial de archivos generados (con filtros)
+    @GetMapping("/historial")
+    public ResponseEntity<List<Documento>> consultarHistorial(
             @RequestParam String transportista,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
         
-        List<Guia> resultado = guiaService.buscarPorFiltros(transportista, inicio, fin);
-        return ResponseEntity.ok(resultado);
+        List<Documento> historial = documentoService.consultarHistorial(transportista, inicio, fin);
+        return ResponseEntity.ok(historial);
     }
+
 }
