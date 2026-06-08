@@ -1,28 +1,32 @@
-# Etapa 1: Compilación del proyecto con Maven
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# --- Etapa 1: Compilar con Maven ---
+FROM eclipse-temurin:21-jdk AS buildstage
+
+
+RUN apt-get update && apt-get install -y maven
+
 WORKDIR /app
 
-# Copiar el archivo de configuración de dependencias
+
 COPY pom.xml .
+COPY src /app/src
 
-# Copiar el código fuente y el contenido de resources (incluido el Wallet)
-COPY src ./src
 
-# Compilar empaquetando el archivo .jar omitiendo los tests para acelerar el pipeline
 RUN mvn clean package -DskipTests
 
-# Etapa 2: Imagen final liviana para ejecución
-FROM eclipse-temurin:21-jre-alpine
+# --- Etapa 2: Imagen final optimizada ---
+FROM eclipse-temurin:21-jdk
+
 WORKDIR /app
 
-# Copiar el archivo .jar generado en la etapa anterior
-COPY --from=build /app/target/*.jar app.jar
 
-# Copiar la carpeta del Wallet explícitamente para que la app lo encuentre en producción
-COPY --from=build /app/src/main/resources/wallet /app/src/main/resources/wallet
+COPY --from=buildstage /app/target/*.jar /app/app.jar
 
-# Exponer el puerto solicitado en el requerimiento
+
+
+# Directorio local para enlazar el montaje de Amazon EFS
+RUN mkdir -p /app/efs
+
 EXPOSE 8080
 
-# Comando para ejecutar el microservicio
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+CMD ["java", "-jar", "/app/app.jar"]
