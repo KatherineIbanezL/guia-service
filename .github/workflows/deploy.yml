@@ -59,6 +59,9 @@ jobs:
             AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_EC2_METADATA_DISABLED=true
+            SPRING_CLOUD_AWS_STACK_AUTO=false
+            SPRING_CLOUD_AWS_REGION_AUTO=false
             AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
             AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET }}
             AWS_BUCKET=${{ secrets.AWS_S3_BUCKET }}
