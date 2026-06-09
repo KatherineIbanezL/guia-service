@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "documentos_cloud")
+@Table(name = "documentos_v3")
 public class Documento {
 
     @Id
