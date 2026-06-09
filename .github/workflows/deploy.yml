@@ -60,7 +60,6 @@ jobs:
             AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             AWS_REGION=${{ secrets.AWS_REGION }}
             AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
-            AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET }}
             EOF
             docker run -d --name guia-service -p 8080:8080 --env-file java_env.list -v /mnt/efs:/app/efs -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
             rm -f java_env.list
