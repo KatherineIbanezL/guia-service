@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 public class EFSService {
 
     // Ruta de montaje física del EFS dentro del servidor Linux de la EC2
-    private static final String EFS_MOUNT_PATH = "/app/efs/";
+    private static final String EFS_MOUNT_PATH = "/app/efs";
 
     public String guardarTemporalmente(Long guiaId, byte[] contenidoPdf) throws IOException {
         File directorio = new File(EFS_MOUNT_PATH);
