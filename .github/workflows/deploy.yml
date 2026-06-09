@@ -50,23 +50,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Descargar la versión más reciente que acabamos de compilar
+            # Descargar la versión más reciente
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
             
-            # Detener y limpiar cualquier contenedor previo si existía
+            # Detener y limpiar cualquier contenedor previo
             docker stop guia-service || true
             docker rm guia-service || true
             
-            # Encender el nuevo contenedor inyectando de forma automatizada las credenciales
-            docker run -d \
-              --name guia-service \
-              -p 8080:8080 \
-              -e TNS_ADMIN=/app/src/main/resources/Wallet_MBD \
-              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-              -e AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }} \
-              -e AWS_REGION=${{ secrets.AWS_REGION }} \
-              -e AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET }} \
-              -v /mnt/efs:/app/efs \
-              -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD \
-              ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
+            # Encender el contenedor en una sola línea continua libre de errores por espacios
+            docker run -d --name guia-service -p 8080:8080 -e TNS_ADMIN=/app/src/main/resources/Wallet_MBD -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} -e AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }} -e AWS_REGION=${{ secrets.AWS_REGION }} -e AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET }} -v /mnt/efs:/app/efs -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
