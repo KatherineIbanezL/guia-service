@@ -2,8 +2,7 @@ package cl.duoc.guia_service.model;
 
 import javax.persistence.*; 
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+
 
 import java.time.LocalDateTime;
 
