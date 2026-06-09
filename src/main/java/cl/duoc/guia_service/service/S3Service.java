@@ -22,7 +22,7 @@ public class S3Service {
         this.s3Client = s3Client;
     }
 
-    // Criterio 2: Subir archivos organizados correctamente en carpetas (fecha/entidad)
+    // Subir archivos organizados correctamente en carpetas (fecha/entidad)
     public String subirArchivo(String entidad, File archivo) {
         String fechaCarpeta = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String s3Key = fechaCarpeta + "/" + entidad + "/" + archivo.getName();
@@ -36,7 +36,7 @@ public class S3Service {
         return s3Key;
     }
 
-    // Criterio 3: Modificar y actualizar los archivos en AWS S3 (Sobrescribe el Key existente)
+    // Modificar y actualizar los archivos en AWS S3 (Sobrescribe el Key existente)
     public void actualizarArchivo(String s3Key, File nuevoArchivo) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -46,7 +46,7 @@ public class S3Service {
         s3Client.putObject(putObjectRequest, RequestBody.fromFile(nuevoArchivo));
     }
 
-    // Criterio 4: Descargar los archivos desde AWS S3 asegurando integridad
+    // Descargar los archivos desde AWS S3 asegurando integridad
     public byte[] descargarArchivo(String s3Key) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)

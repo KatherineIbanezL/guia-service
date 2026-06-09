@@ -24,7 +24,7 @@ public class DocumentoController {
         this.s3Service = s3Service;
     }
 
-    // Mapea Criterio 1 y 2: Crear almacenamiento EFS y subir automático a S3
+    // Crear almacenamiento EFS y subir automático a S3
     @PostMapping("/generar")
     public ResponseEntity<Documento> generarDocumento(
             @RequestParam String transportista,
@@ -38,7 +38,7 @@ public class DocumentoController {
         }
     }
 
-    // Mapea Criterio 3: Modificar y actualizar los archivos en S3
+    // Modificar y actualizar los archivos en S3
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<Documento> actualizarDocumento(
             @PathVariable Long id,
@@ -52,7 +52,7 @@ public class DocumentoController {
         }
     }
 
-    // Mapea Criterio 4: Descargar los archivos desde AWS S3
+    // Descargar los archivos desde AWS S3
     @GetMapping("/descargar/{id}")
     public ResponseEntity<byte[]> descargarDocumento(@PathVariable Long id) {
         try {
@@ -69,7 +69,7 @@ public class DocumentoController {
         }
     }
 
-    // Endpoint obligatorio: Eliminar guías específicas
+    // Endpoint obligatorio
     @DeleteMapping("/{id}")
     public ResponseEntity<String> eliminarDocumento(@PathVariable Long id) {
         try {
@@ -85,7 +85,7 @@ public class DocumentoController {
         }
     }
 
-    // Mapea Criterio 5: Consulta el historial de archivos generados (con filtros)
+    // Consulta el historial de archivos generados (con filtros)
     @GetMapping("/historial")
     public ResponseEntity<List<Documento>> consultarHistorial(
             @RequestParam String transportista,

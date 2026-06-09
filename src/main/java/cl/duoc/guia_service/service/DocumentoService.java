@@ -1,7 +1,7 @@
 package cl.duoc.guia_service.service;
 
 import cl.duoc.guia_service.model.Documento;
-import cl.duoc.guia_service.repository.DocumentoRepository; // Asegúrate de renombrar la interfaz del repositorio
+import cl.duoc.guia_service.repository.DocumentoRepository; 
 import org.springframework.stereotype.Service;
 import java.io.File;
 import java.time.LocalDateTime;
@@ -20,29 +20,29 @@ public class DocumentoService {
         this.s3Service = s3Service;
     }
 
-    // Flujo inicial de carga (Criterio 1 y Criterio 2)
-    public Documento registrarDocumento(String transportista, String nombre, byte[] contenido) throws Exception {
+    // Flujo inicial de carga
+    public Documento registrarDocumento(String transportista, String nombre, byte[] mockPdf) throws Exception {
         Documento doc = new Documento();
         doc.setNombreArchivo(nombre);
         doc.setTipoDocumento("GUIA_DESPACHO");
         doc.setTransportistaEntity(transportista);
         doc.setFechaCreacion(LocalDateTime.now());
         doc.setEstado("ACTIVO");
-        doc = documentoRepository.save(doc);
+        doc = documentoRepository.saveAndFlush(doc);
 
-        // Almacenamiento temporal en EFS (Criterio 1)
-        String rutaEfs = efsService.guardarTemporalmente(doc.getId(), contenido);
+        // Almacenamiento temporal en EFS 
+        String rutaEfs = efsService.guardarTemporalmente(doc.getId(), mockPdf);
         doc.setRutaEfs(rutaEfs);
 
-        // Subida automática a S3 (Criterio 2)
+        // Subida automática a S3 
         File archivoTemp = new File(rutaEfs);
         String s3Key = s3Service.subirArchivo(transportista, archivoTemp);
         doc.setS3Key(s3Key);
 
-        return documentoRepository.save(doc);
+        return documentoRepository.saveAndFlush(doc);
     }
 
-    // Criterio 3: Modificar y actualizar archivos en S3 y BD
+    // Modificar y actualizar archivos en S3 y BD
     public Documento actualizarDocumento(Long id, byte[] nuevoContenido) throws Exception {
         Documento doc = documentoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Documento no encontrado"));
@@ -58,19 +58,19 @@ public class DocumentoService {
         doc.setFechaModificacion(LocalDateTime.now());
         doc.setEstado("MODIFICADO");
         
-        return documentoRepository.save(doc);
+        return documentoRepository.saveAndFlush(doc);
     }
 
-    // Criterio 4: eliminar guías específicas
+    // eliminar guías específicas
     public void eliminarDocumentoFisicoYLogico(Documento doc) throws Exception {
     // 1. Eliminar del sistema de archivos temporal EFS
     efsService.eliminarDeEfs(doc.getRutaEfs());
     
-    // 2. Eliminar el registro en la base de datos de Oracle Cloud
+    // Eliminar el registro en la base de datos de Oracle Cloud
     documentoRepository.delete(doc);
     }   
 
-    // Criterio 5: Consultar el historial de archivos por entidad y rango de fechas
+    //Consultar el historial de archivos por entidad y rango de fechas
     public List<Documento> consultarHistorial(String entidad, LocalDateTime inicio, LocalDateTime fin) {
         return documentoRepository.findByTransportistaEntityAndFechaCreacionBetween(entidad, inicio, fin);
     }
