@@ -13,6 +13,7 @@ public class Documento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", insertable = false, updatable = false)
     private Long id;
 
     private String nombreArchivo;
@@ -24,7 +25,7 @@ public class Documento {
     private String s3Key;   
     private String estado;
     
-    // Agrega esto al final de tu clase Documento.java
+   
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
