@@ -68,6 +68,8 @@ jobs:
             SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             SPRING_CLOUD_AWS_CREDENTIALS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             SPRING_CLOUD_AWS_REGION_STATIC=${{ secrets.AWS_REGION }}
+            ISSUER_URI=${{ secrets.ISSUER_URI }}
+            AUDIENCE=${{ secrets.AUDIENCE }}
             EOF
             docker run -d --name guia-service -p 8080:8080 \
             --env-file java_env.list \

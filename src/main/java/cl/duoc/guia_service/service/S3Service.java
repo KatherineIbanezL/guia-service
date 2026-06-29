@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.File;
@@ -22,7 +23,18 @@ public class S3Service {
         this.s3Client = s3Client;
     }
 
-    // Subir archivos organizados correctamente en carpetas (fecha/entidad)
+    // Recibe la llave pre-armada "resumenes/{id_resumen}/{nombre_archivo}.pdf" desde el service 
+    public String subirArchivoConKey(String s3Key, File archivo) {
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(awsS3BucketName)
+                .key(s3Key)
+                .build();
+
+        s3Client.putObject(putObjectRequest, RequestBody.fromFile(archivo));
+        return s3Key;
+    }
+
+    // Subir archivos
     public String subirArchivo(String entidad, File archivo) {
         String fechaCarpeta = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String s3Key = fechaCarpeta + "/" + entidad + "/" + archivo.getName();
@@ -36,7 +48,7 @@ public class S3Service {
         return s3Key;
     }
 
-    // Modificar y actualizar los archivos en AWS S3 (Sobrescribe el Key existente)
+    // Modificar y actualizar los archivos en AWS S3 (Sobrescribe la Key existente)
     public void actualizarArchivo(String s3Key, File nuevoArchivo) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(awsS3BucketName)
@@ -58,8 +70,7 @@ public class S3Service {
 
     // Eliminar un archivo de S3 automáticamente cuando se borre en el sistema
     public void eliminarArchivo(String s3Key) {
-        software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteObjectRequest = 
-            software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder()
+        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(awsS3BucketName)
                 .key(s3Key)
                 .build();

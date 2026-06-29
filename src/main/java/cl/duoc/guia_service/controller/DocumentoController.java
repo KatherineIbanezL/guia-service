@@ -2,7 +2,6 @@ package cl.duoc.guia_service.controller;
 
 import cl.duoc.guia_service.model.Documento;
 import cl.duoc.guia_service.service.DocumentoService;
-import cl.duoc.guia_service.service.S3Service;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,14 +16,12 @@ import java.util.List;
 public class DocumentoController {
 
     private final DocumentoService documentoService;
-    private final S3Service s3Service;
 
-    public DocumentoController(DocumentoService documentoService, S3Service s3Service) {
+    public DocumentoController(DocumentoService documentoService) {
         this.documentoService = documentoService;
-        this.s3Service = s3Service;
     }
 
-    // Crear almacenamiento EFS y subir automático a S3
+    // 1. ENDPOINT: SUBIR / GENERAR RESUMEN
     @PostMapping("/generar")
     public ResponseEntity<?> generarDocumento(
             @RequestParam String transportista,
@@ -35,23 +32,20 @@ public class DocumentoController {
             return new ResponseEntity<>(nuevoDoc, HttpStatus.CREATED);
             
         } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
-            // Error específico 1: Fallo en AWS S3 (Credenciales, tokens, permisos del bucket)
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body("Error en servicio AWS S3: " + e.awsErrorDetails().errorMessage());
                     
         } catch (java.io.IOException e) {
-            // Error específico 2: Fallo físico de escritura en EFS / Carpeta local
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error de infraestructura local: No se pudo escribir en el almacenamiento temporal EFS.");
                     
         } catch (Exception e) {
-            // Error genérico de respaldo: Por si falla la Base de Datos Oracle u otra cosa
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error interno no controlado en el servidor: " + e.getMessage());
         }
     }
 
-    // Modificar y actualizar los archivos en S3
+    // 2. ENDPOINT: MODIFICAR / ACTUALIZAR
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<?> actualizarDocumento(
             @PathVariable Long id,
@@ -62,28 +56,25 @@ public class DocumentoController {
             return ResponseEntity.ok(docActualizado);
             
         } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
-            // 1. ESPECÍFICO DE S3
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body("Error al actualizar objeto en AWS S3: " + e.awsErrorDetails().errorMessage());
                     
-        } catch (RuntimeException e) {
-            // 2. GENERAL DE RUNTIME
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Error de negocio: " + e.getMessage());
                     
         } catch (Exception e) {
-            // 3. RESPALDO GENÉRICO
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error interno inesperado al actualizar: " + e.getMessage());
         }
     }
 
-    // Descargar los archivos desde AWS S3
+    // 3. ENDPOINT: DESCARGAR
     @GetMapping("/descargar/{id}")
     public ResponseEntity<?> descargarDocumento(@PathVariable Long id) {
         try {
             Documento doc = documentoService.obtenerPorId(id);
-            byte[] archivoBytes = s3Service.descargarArchivo(doc.getS3Key());
+            byte[] archivoBytes = documentoService.descargarArchivoS3(id);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
@@ -92,46 +83,41 @@ public class DocumentoController {
             return new ResponseEntity<>(archivoBytes, headers, HttpStatus.OK);
 
         } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
-            // El archivo no existe en el Bucket o hay problemas de credenciales AWS
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body("Error en el almacenamiento AWS S3: " + e.awsErrorDetails().errorMessage());
 
-        } catch (RuntimeException e) {
-            // No existe el ID en la base de datos Oracle
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Error de consulta: El ID " + id + " no existe en los registros.");
+                    .body("Error de consulta: " + e.getMessage());
                     
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error de estado: " + e.getMessage());
                     
         } catch (Exception e) {
-            // Error genérico de respaldo
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error inesperado al intentar descargar el archivo: " + e.getMessage());
         }
     }
 
-    // Endpoint obligatorio
+    // 4. ENDPOINT: BORRAR / ELIMINAR
     @DeleteMapping("/{id}")
     public ResponseEntity<String> eliminarDocumento(@PathVariable Long id) {
         try {
-            // Buscamos el documento en Oracle Cloud
-            Documento doc = documentoService.obtenerPorId(id);
-            
-            documentoService.eliminarDocumentoFisicoYLogico(doc);
-            return ResponseEntity.ok("Archivo y registros eliminados con éxito.");
+            documentoService.eliminarDocumentoFisicoYLogico(id);
+            return ResponseEntity.ok("Archivo físico en S3, temporal en EFS y registros en Oracle eliminados con éxito.");
 
-        } catch (RuntimeException e) {
-            // Error específico 1: El documento a eliminar no existe
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Error de eliminación: No se puede borrar porque el documento no existe.");
+                    .body("Error de eliminación: " + e.getMessage());
                     
         } catch (Exception e) {
-            // Captura fallos al intentar borrar físicamente en S3, EFS o DB
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al eliminar el archivo: " + e.getMessage());
         }
     }
 
-    // Consulta el historial de archivos generados (con filtros)
+    // 5. HISTORIAL DE AUDITORÍA
     @GetMapping("/historial")
     public ResponseEntity<?> consultarHistorial(
             @RequestParam String transportista,
@@ -141,15 +127,13 @@ public class DocumentoController {
             List<Documento> historial = documentoService.consultarHistorial(transportista, inicio, fin);
             
             if (historial.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // O un mensaje de "No hay registros"
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
             }
             return ResponseEntity.ok(historial);
 
         } catch (Exception e) {
-            // Captura fallos de conectividad con el pool de base de datos
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al consultar el historial en la base de datos: " + e.getMessage());
         }
     }
-
 }
