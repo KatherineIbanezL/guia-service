@@ -1,10 +1,8 @@
 package cl.duoc.guia_service.model;
 
-import javax.persistence.*; 
-import lombok.Data;
-
-
 import java.time.LocalDateTime;
+import javax.persistence.*;
+import lombok.Data;
 
 @Data
 @Entity
@@ -16,40 +14,27 @@ public class Documento {
     @Column(name = "id", insertable = false, updatable = false)
     private Long id;
 
+    @Column(name = "nombre_archivo", length = 255)
     private String nombreArchivo;
+
+    @Column(name = "tipo_documento", length = 100)
     private String tipoDocumento;
-    private String transportistaEntity; 
+
+    @Column(name = "transportista_entity", length = 255)
+    private String transportistaEntity;
+
+    @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
+
+    @Column(name = "fecha_modificacion")
     private LocalDateTime fechaModificacion;
-    private String rutaEfs; 
-    private String s3Key;   
+
+    @Column(name = "ruta_efs", length = 500)
+    private String rutaEfs;
+
+    @Column(name = "s3_key", length = 500)
+    private String s3Key;
+
+    @Column(name = "estado", length = 50)
     private String estado;
-    
-   
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getNombreArchivo() { return nombreArchivo; }
-    public void setNombreArchivo(String nombreArchivo) { this.nombreArchivo = nombreArchivo; }
-
-    public String getTipoDocumento() { return tipoDocumento; }
-    public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
-
-    public String getTransportistaEntity() { return transportistaEntity; }
-    public void setTransportistaEntity(String transportistaEntity) { this.transportistaEntity = transportistaEntity; }
-
-    public java.time.LocalDateTime getFechaCreacion() { return fechaCreacion; }
-    public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
-
-    public java.time.LocalDateTime getFechaModificacion() { return fechaModificacion; }
-    public void setFechaModificacion(java.time.LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
-
-    public String getRutaEfs() { return rutaEfs; }
-    public void setRutaEfs(String rutaEfs) { this.rutaEfs = rutaEfs; }
-
-    public String getS3Key() { return s3Key; }
-    public void setS3Key(String s3Key) { this.s3Key = s3Key; }
-
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
 }
