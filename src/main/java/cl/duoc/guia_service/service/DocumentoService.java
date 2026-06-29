@@ -20,7 +20,7 @@ public class DocumentoService {
         this.s3Service = s3Service;
     }
 
-    // Flujo inicial de carga
+    // 1. REGISTRAR / SUBIR
     public Documento registrarDocumento(String transportista, String nombre, byte[] mockPdf) throws Exception {
         Documento doc = new Documento();
         doc.setNombreArchivo(nombre);
@@ -28,29 +28,34 @@ public class DocumentoService {
         doc.setTransportistaEntity(transportista);
         doc.setFechaCreacion(LocalDateTime.now());
         doc.setEstado("ACTIVO");
+        
+        // Guardar en Oracle para obtener el ID secuencial autoincrementable
         doc = documentoRepository.saveAndFlush(doc);
 
         // Almacenamiento temporal en EFS 
         String rutaEfs = efsService.guardarTemporalmente(doc.getId(), mockPdf);
         doc.setRutaEfs(rutaEfs);
 
-        // Subida automática a S3 
+        // Construir Key estructurada por Carpeta con el Número de Resumen (ID)
+        String s3KeyEstructurada = "resumenes/" + doc.getId() + "/" + nombre;
+        
         File archivoTemp = new File(rutaEfs);
-        String s3Key = s3Service.subirArchivo(transportista, archivoTemp);
+        // Envia la Key estructurada directamente al S3Service
+        String s3Key = s3Service.subirArchivoConKey(s3KeyEstructurada, archivoTemp);
         doc.setS3Key(s3Key);
 
         return documentoRepository.saveAndFlush(doc);
     }
 
-    // Modificar y actualizar archivos en S3 y BD
+    // 2. MODIFICAR / ACTUALIZAR
     public Documento actualizarDocumento(Long id, byte[] nuevoContenido) throws Exception {
         Documento doc = documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Documento no encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("Resumen de inscripción no encontrado con el ID: " + id));
 
         // 1. Actualizar el archivo físico temporal en EFS
         efsService.guardarTemporalmente(doc.getId(), nuevoContenido);
         
-        // 2. Modificar el archivo directo en S3 usando la misma Key de origen
+        // 2. Modificar el archivo directo en S3 usando la Key estructurada existente
         File archivoActualizado = new File(doc.getRutaEfs());
         s3Service.actualizarArchivo(doc.getS3Key(), archivoActualizado);
 
@@ -61,22 +66,50 @@ public class DocumentoService {
         return documentoRepository.saveAndFlush(doc);
     }
 
-    // eliminar guías específicas
-    public void eliminarDocumentoFisicoYLogico(Documento doc) throws Exception {
-    // 1. Eliminar del sistema de archivos temporal EFS
-    efsService.eliminarDeEfs(doc.getRutaEfs());
-    
-    // Eliminar el registro en la base de datos de Oracle Cloud
-    documentoRepository.delete(doc);
-    }   
+    // 3. DESCARGAR
+    public byte[] descargarArchivoS3(Long id) throws Exception {
+        Documento doc = documentoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró el documento para descargar con el ID: " + id));
+        
+        if (doc.getS3Key() == null || doc.getS3Key().isEmpty()) {
+            throw new IllegalStateException("El documento no posee una llave válida de AWS S3 asociada.");
+        }
+        
+        // Descarga el arreglo de bytes puro desde el bucket de AWS S3
+        return s3Service.descargarArchivo(doc.getS3Key());
+    }
 
-    //Consultar el historial de archivos por entidad y rango de fechas
-    public List<Documento> consultarHistorial(String entidad, LocalDateTime inicio, LocalDateTime fin) {
-        return documentoRepository.findByTransportistaEntityAndFechaCreacionBetween(entidad, inicio, fin);
+    // 4. BORRAR / ELIMINAR
+    public void eliminarDocumentoFisicoYLogico(Long id) throws Exception {
+        Documento doc = documentoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("No se puede eliminar un registro inexistente con ID: " + id));
+
+        // 1. Eliminar del sistema de archivos temporal EFS
+        if (doc.getRutaEfs() != null) {
+            efsService.eliminarDeEfs(doc.getRutaEfs());
+        }
+        
+        // 2. Eliminar el objeto almacenado en AWS S3
+        if (doc.getS3Key() != null && !doc.getS3Key().isEmpty()) {
+            try {
+                s3Service.eliminarArchivo(doc.getS3Key());
+            } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
+                System.err.println("Advertencia de AWS: Falló remoción física en S3: " + e.awsErrorDetails().errorMessage());
+            }
+        }
+
+        // 3. Eliminar el registro en la base de datos de Oracle Cloud
+        documentoRepository.delete(doc);
+    } 
+
+    // 5. CONNSULTAR HISTORIAL
+    public List<Documento> consultarHistorial(String transportista, LocalDateTime inicio, LocalDateTime fin) {
+        return documentoRepository.findByTransportistaEntityAndFechaCreacionBetween(transportista, inicio, fin);
     }
 
     public Documento obtenerPorId(Long id) {
         return documentoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ID no encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException("ID de documento no encontrada: " + id));
     }
+
 }
