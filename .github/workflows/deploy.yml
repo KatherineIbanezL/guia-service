@@ -69,5 +69,9 @@ jobs:
             SPRING_CLOUD_AWS_CREDENTIALS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             SPRING_CLOUD_AWS_REGION_STATIC=${{ secrets.AWS_REGION }}
             EOF
-            docker run -d --name guia-service -p 8080:8080 --env-file java_env.list -v /tmp:/app/efs -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
-            rm -f java_env.list
+            docker run -d --name guia-service -p 8080:8080 \
+            --env-file java_env.list \
+            -e JAVA_TOOL_OPTIONS="-Doracle.net.tns_admin=/app/src/main/resources/Wallet_MBD -Doracle.net.wallet_location=/app/src/main/resources/Wallet_MBD" \
+            -v /tmp:/app/efs \
+            -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD \
+            ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
