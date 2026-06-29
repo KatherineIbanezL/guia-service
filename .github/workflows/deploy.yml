@@ -54,7 +54,8 @@ jobs:
             docker stop guia-service || true
             docker rm guia-service || true
             cat << EOF > java_env.list
-            TNS_ADMIN=/app/src/main/resources/Wallet_MBD
+            TNS_ADMIN="/app/src/main/resources/Wallet_MBD"
+            ORACLE_NET_WALLET_LOCATION="/app/src/main/resources/Wallet_MBD"
             AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
