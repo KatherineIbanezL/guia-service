@@ -117,7 +117,7 @@ public class DocumentoController {
         }
     }
 
-    // 5. HISTORIAL DE AUDITORÍA
+    // 5. ENDPOINT: HISTORIAL 
     @GetMapping("/historial")
     public ResponseEntity<?> consultarHistorial(
             @RequestParam String transportista,
