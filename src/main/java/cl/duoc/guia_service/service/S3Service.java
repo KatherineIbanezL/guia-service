@@ -16,7 +16,7 @@ public class S3Service {
     private final S3Client s3Client;
 
     @Value("${aws.s3.bucket-name}")
-    private String bucketName;
+    private String awsS3BucketName;
 
     public S3Service(S3Client s3Client) {
         this.s3Client = s3Client;
@@ -28,7 +28,7 @@ public class S3Service {
         String s3Key = fechaCarpeta + "/" + entidad + "/" + archivo.getName();
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(awsS3BucketName)
                 .key(s3Key)
                 .build();
 
@@ -39,7 +39,7 @@ public class S3Service {
     // Modificar y actualizar los archivos en AWS S3 (Sobrescribe el Key existente)
     public void actualizarArchivo(String s3Key, File nuevoArchivo) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(awsS3BucketName)
                 .key(s3Key)
                 .build();
 
@@ -49,10 +49,21 @@ public class S3Service {
     // Descargar los archivos desde AWS S3 asegurando integridad
     public byte[] descargarArchivo(String s3Key) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(awsS3BucketName)
                 .key(s3Key)
                 .build();
                 
         return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
+    }
+
+    // Eliminar un archivo de S3 automáticamente cuando se borre en el sistema
+    public void eliminarArchivo(String s3Key) {
+        software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteObjectRequest = 
+            software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder()
+                .bucket(awsS3BucketName)
+                .key(s3Key)
+                .build();
+                
+        s3Client.deleteObject(deleteObjectRequest);
     }
 }
