@@ -71,7 +71,7 @@ jobs:
             EOF
             docker run -d --name guia-service -p 8080:8080 \
             --env-file java_env.list \
-            -e JAVA_TOOL_OPTIONS="-Doracle.net.tns_admin=/app/src/main/resources/Wallet_MBD -Doracle.net.wallet_location=/app/src/main/resources/Wallet_MBD" \
+            -e JAVA_TOOL_OPTIONS="-doracle.net.tns_admin=/app/src/main/resources/Wallet_MBD -doracle.net.wallet_location=/app/src/main/resources/Wallet_MBD" \
             -v /tmp:/app/efs \
             -v /home/ec2-user/Wallet_MBD:/app/src/main/resources/Wallet_MBD \
             ${{ secrets.DOCKERHUB_USERNAME }}/guia-service:latest
