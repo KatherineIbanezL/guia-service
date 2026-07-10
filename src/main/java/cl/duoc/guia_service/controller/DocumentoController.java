@@ -1,5 +1,6 @@
 package cl.duoc.guia_service.controller;
 
+import cl.duoc.guia_service.dto.DocumentoRequestDto;
 import cl.duoc.guia_service.model.Documento;
 import cl.duoc.guia_service.service.DocumentoService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -49,20 +50,17 @@ public class DocumentoController {
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<?> actualizarDocumento(
             @PathVariable Long id,
-            @RequestBody String nuevoContenidoTexto) {
+            @RequestBody DocumentoRequestDto requestDto) { 
         try {
-            byte[] nuevosBytes = nuevoContenidoTexto.getBytes();
-            Documento docActualizado = documentoService.actualizarDocumento(id, nuevosBytes);
+            Documento docActualizado = documentoService.actualizarDocumentoCompleto(id, requestDto);
             return ResponseEntity.ok(docActualizado);
             
         } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body("Error al actualizar objeto en AWS S3: " + e.awsErrorDetails().errorMessage());
-                    
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Error de negocio: " + e.getMessage());
-                    
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error interno inesperado al actualizar: " + e.getMessage());

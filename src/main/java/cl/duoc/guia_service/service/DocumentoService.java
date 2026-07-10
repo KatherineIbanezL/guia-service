@@ -1,5 +1,6 @@
 package cl.duoc.guia_service.service;
 
+import cl.duoc.guia_service.dto.DocumentoRequestDto;
 import cl.duoc.guia_service.model.Documento;
 import cl.duoc.guia_service.repository.DocumentoRepository; 
 import org.springframework.stereotype.Service;
@@ -47,23 +48,24 @@ public class DocumentoService {
         return documentoRepository.saveAndFlush(doc);
     }
 
-    // 2. MODIFICAR / ACTUALIZAR
-    public Documento actualizarDocumento(Long id, byte[] nuevoContenido) throws Exception {
-        Documento doc = documentoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Resumen de inscripción no encontrado con el ID: " + id));
+    public Documento actualizarDocumentoCompleto(Long id, DocumentoRequestDto dto) {
+        // 1. Buscar el documento existente en Oracle
+        Documento documento = documentoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado"));
 
-        // 1. Actualizar el archivo físico temporal en EFS
-        efsService.guardarTemporalmente(doc.getId(), nuevoContenido);
-        
-        // 2. Modificar el archivo directo en S3 usando la Key estructurada existente
-        File archivoActualizado = new File(doc.getRutaEfs());
-        s3Service.actualizarArchivo(doc.getS3Key(), archivoActualizado);
+        if (dto.getTransportista() != null) {
+            documento.setTransportistaEntity(dto.getTransportista());
+        }
+        if (dto.getNombreArchivo() != null) {
+            documento.setNombreArchivo(dto.getNombreArchivo());
+        }
 
-        // 3. Actualizar metadatos de auditoría en Oracle Cloud
-        doc.setFechaModificacion(LocalDateTime.now());
-        doc.setEstado("MODIFICADO");
-        
-        return documentoRepository.saveAndFlush(doc);
+        // 3. Registrar auditorías
+        documento.setEstado("MODIFICADO");
+        documento.setFechaModificacion(LocalDateTime.now());
+
+        // 4. Guardar los cambios finales en Oracle Cloud
+        return documentoRepository.save(documento);
     }
 
     // 3. DESCARGAR
